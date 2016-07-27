@@ -1,10 +1,6 @@
 def buildVersion = null
 properties([[$class: 'BuildDiscarderProperty', strategy: [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5']]])
 stage 'Build'
-if(!env.JOB_NAME.startsWith("team-productivity/beedemo-sa/mobile-deposit-api/")) {
-  echo 'only build for beedemo-sa org folder'
-  error 'invalid project path'
-}
 node('docker-cloud') {
     checkout scm
     docker.image('kmadel/maven:3.3.3-jdk-8').inside('-v /data:/data') {
@@ -61,7 +57,7 @@ if(env.BRANCH_NAME=="master"){
         stage 'Build Docker Image'
         def mobileDepositApiImage
         dir('target') {
-            mobileDepositApiImage = docker.build "kmadel/mobile-deposit-api:${buildVersion}"
+            mobileDepositApiImage = docker.build "beedemo/mobile-deposit-api:${buildVersion}"
         }
 
         stage 'Deploy to Prod'
@@ -77,14 +73,14 @@ if(env.BRANCH_NAME=="master"){
             --data-urlencode status=deployed \
             --data-urlencode hostName=prod-server-1 \
             --data-urlencode hostName=prod \
-            --data-urlencode imageName=cloudbees/mobile-deposit-api \
+            --data-urlencode imageName=beedemo/mobile-deposit-api \
             --data-urlencode inspectData=\"\$(docker inspect $container.id)\""
         
         
         stage 'Publish Docker Image'
         sh "docker -v"
         //use withDockerRegistry to make sure we are logged in to docker hub registry
-        withDockerRegistry(registry: [credentialsId: 'docker-registry-kmadel-login']) { 
+        withDockerRegistry(registry: [credentialsId: 'docker-hub-beedemo']) { 
           mobileDepositApiImage.push()
         }
      }
