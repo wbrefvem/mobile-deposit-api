@@ -1,6 +1,6 @@
 def buildVersion = null
 def short_commit = null
-echo "Building ${env.BRANCH_NAME}""
+echo "Building ${env.BRANCH_NAME}"
 properties([[$class: 'BuildDiscarderProperty', strategy: [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5']]])
 stage 'Build'
 node('docker-cloud') {
