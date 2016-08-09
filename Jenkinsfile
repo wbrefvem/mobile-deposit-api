@@ -61,7 +61,7 @@ if(env.BRANCH_NAME=="master"){
     matcher = null
 
     stage 'Build Docker Image'
-    def dockerTag = ${env.BUILD_NUMBER}-${short_commit}
+    def dockerTag = "${env.BUILD_NUMBER}-${short_commit}"
     def mobileDepositApiImage
     dir('target') {
         mobileDepositApiImage = docker.build "beedemo/mobile-deposit-api:${dockerTag}"
