@@ -51,39 +51,22 @@ if(env.BRANCH_NAME=="master"){
         echo "Release version: ${buildVersion}"
     }
     matcher = null
+
+    stage 'Build Docker Image'
+    def mobileDepositApiImage
+    dir('target') {
+        mobileDepositApiImage = docker.build "beedemo/mobile-deposit-api:${buildVersion}"
+    }
     
-    docker.withServer('tcp://52.27.249.236:3376', 'beedemo-swarm-cert'){
-
-        stage 'Build Docker Image'
-        def mobileDepositApiImage
-        dir('target') {
-            mobileDepositApiImage = docker.build "beedemo/mobile-deposit-api:${buildVersion}"
-        }
-
-        stage 'Deploy to Prod'
-        try{
-          sh "docker stop beedemo-swarm-master/mobile-deposit-api"
-          sh "docker rm beedemo-swarm-master/mobile-deposit-api"
-        } catch (Exception _) {
-           echo "no container to stop"        
-        }
-        //docker traceability rest call
-        container = mobileDepositApiImage.run("--name mobile-deposit-api -p 8080:8080 --env='constraint:node==beedemo-swarm-master'")
-        sh "curl http://webhook:018ebf0660a74b561b852105e35a33b6@jenkins.beedemo.net/api-team/docker-traceability/submitContainerStatus \
-            --data-urlencode status=deployed \
-            --data-urlencode hostName=prod-server-1 \
-            --data-urlencode hostName=prod \
-            --data-urlencode imageName=beedemo/mobile-deposit-api \
-            --data-urlencode inspectData=\"\$(docker inspect $container.id)\""
-        
-        
-        stage 'Publish Docker Image'
-        sh "docker -v"
-        //use withDockerRegistry to make sure we are logged in to docker hub registry
-        withDockerRegistry(registry: [credentialsId: 'docker-hub-beedemo']) { 
-          mobileDepositApiImage.push()
-        }
-     }
+    stage 'Publish Docker Image'
+    sh "docker -v"
+    //use withDockerRegistry to make sure we are logged in to docker hub registry
+    withDockerRegistry(registry: [credentialsId: 'docker-hub-beedemo']) { 
+      mobileDepositApiImage.push()
+    }
+    stage 'Deploy to Prod'
+    //using global library to deploy to docker cloud: params are (nodeLabel, imageTag, name, innerPort, outerPort, httpRequestAuthId)
+    dockerCloudDeploy('docker-cloud', "beedemo/mobile-deposit-api:$buildVersion", 'mobile-deposit-api', 8080, 8080, 'beedemo-docker-cloud')
   }
 }
 node('docker-cloud') {
