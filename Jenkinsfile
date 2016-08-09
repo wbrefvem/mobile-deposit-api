@@ -63,6 +63,8 @@ if(env.BRANCH_NAME=="master"){
     stage 'Build Docker Image'
     def dockerTag = "${env.BUILD_NUMBER}-${short_commit}"
     def mobileDepositApiImage
+    //unstash Spring Boot JAR and Dockerfile
+    unstash 'jar-dockerfile'
     dir('target') {
         mobileDepositApiImage = docker.build "beedemo/mobile-deposit-api:${dockerTag}"
     }
