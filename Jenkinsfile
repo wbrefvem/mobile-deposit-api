@@ -8,7 +8,7 @@ node('docker-cloud') {
     git_commit=readFile('GIT_COMMIT')
     short_commit=git_commit.take(7)
     docker.image('kmadel/maven:3.3.3-jdk-8').inside('-v /data:/data') {
-        sh "mvn -Dmaven.repo.local=/data/mvn/repo -DGIT_COMMIT='${git_commit}' -DBUILD_NUMBER=${env.BUILD_NUMBER} -DBUILD_URL=${env.BUILD_URL} clean package"
+        sh "mvn -Dmaven.repo.local=/data/mvn/repo -DGIT_COMMIT='${short_commit}' -DBUILD_NUMBER=${env.BUILD_NUMBER} -DBUILD_URL=${env.BUILD_URL} clean package"
     }
     stash name: 'pom', includes: 'pom.xml'
     stash name: 'jar-dockerfile', includes: '**/target/*.jar,**/target/Dockerfile'
