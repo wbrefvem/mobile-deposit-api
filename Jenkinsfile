@@ -76,12 +76,12 @@ if(env.BRANCH_NAME=="master"){
       mobileDepositApiImage.push()
     }
   }
-}
-//set checkpoint before deployment
-checkpoint 'Build Complete'
+  //set checkpoint before deployment
+  checkpoint 'Build Complete'
     stage 'Deploy to Prod'
     //using global library to deploy to docker cloud: params are (nodeLabel, imageTag, name, innerPort, outerPort, httpRequestAuthId)
     dockerCloudDeploy('docker-cloud', "beedemo/mobile-deposit-api:$dockerTag", 'mobile-deposit-api', 8080, 8080, 'beedemo-docker-cloud')
+}
 
 node('docker-cloud') {
   //send commit status to GitHub
