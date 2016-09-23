@@ -49,6 +49,7 @@ if(!env.BRANCH_NAME.startsWith("PR")){
 
 if(env.BRANCH_NAME=="master"){
   checkpoint 'Quality Analysis Complete'
+  def dockerTag = "${env.BUILD_NUMBER}-${short_commit}"
   stage name: 'Version Release', concurrency: 1
   node('docker-cloud') {
     unstash 'pom'
@@ -61,7 +62,6 @@ if(env.BRANCH_NAME=="master"){
     matcher = null
 
     stage 'Build Docker Image'
-    def dockerTag = "${env.BUILD_NUMBER}-${short_commit}"
     def mobileDepositApiImage
     //unstash Spring Boot JAR and Dockerfile
     unstash 'jar-dockerfile'
@@ -75,11 +75,14 @@ if(env.BRANCH_NAME=="master"){
     withDockerRegistry(registry: [credentialsId: 'docker-hub-beedemo']) { 
       mobileDepositApiImage.push()
     }
+  }
+  //set checkpoint before deployment
+  checkpoint 'Build Complete'
     stage 'Deploy to Prod'
     //using global library to deploy to docker cloud: params are (nodeLabel, imageTag, name, innerPort, outerPort, httpRequestAuthId)
     dockerCloudDeploy('docker-cloud', "beedemo/mobile-deposit-api:$dockerTag", 'mobile-deposit-api', 8080, 8080, 'beedemo-docker-cloud')
-  }
 }
+
 node('docker-cloud') {
   //send commit status to GitHub
   step([$class: 'GitHubCommitStatusSetter', contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: 'Jenkins'], statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'BetterThanOrEqualBuildResult', message: 'Pipeline completed successfully', result: 'SUCCESS', state: 'SUCCESS']]]])
