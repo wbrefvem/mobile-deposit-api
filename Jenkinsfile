@@ -75,11 +75,14 @@ if(env.BRANCH_NAME=="master"){
     withDockerRegistry(registry: [credentialsId: 'docker-hub-beedemo']) { 
       mobileDepositApiImage.push()
     }
+  }
+}
+//set checkpoint before deployment
+checkpoint 'Build Complete'
     stage 'Deploy to Prod'
     //using global library to deploy to docker cloud: params are (nodeLabel, imageTag, name, innerPort, outerPort, httpRequestAuthId)
     dockerCloudDeploy('docker-cloud', "beedemo/mobile-deposit-api:$dockerTag", 'mobile-deposit-api', 8080, 8080, 'beedemo-docker-cloud')
-  }
-}
+
 node('docker-cloud') {
   //send commit status to GitHub
   step([$class: 'GitHubCommitStatusSetter', contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: 'Jenkins'], statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'BetterThanOrEqualBuildResult', message: 'Pipeline completed successfully', result: 'SUCCESS', state: 'SUCCESS']]]])
