@@ -49,6 +49,7 @@ if(!env.BRANCH_NAME.startsWith("PR")){
 
 if(env.BRANCH_NAME=="master"){
   checkpoint 'Quality Analysis Complete'
+  def dockerTag = "${env.BUILD_NUMBER}-${short_commit}"
   stage name: 'Version Release', concurrency: 1
   node('docker-cloud') {
     unstash 'pom'
@@ -61,7 +62,6 @@ if(env.BRANCH_NAME=="master"){
     matcher = null
 
     stage 'Build Docker Image'
-    def dockerTag = "${env.BUILD_NUMBER}-${short_commit}"
     def mobileDepositApiImage
     //unstash Spring Boot JAR and Dockerfile
     unstash 'jar-dockerfile'
