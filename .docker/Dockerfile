@@ -1,4 +1,4 @@
-FROM kmadel/java:8
+FROM openjdk:8u111-jre-alpine
 VOLUME /tmp
 ADD ${project.build.finalName}.jar app.jar
 RUN bash -c 'touch /app.jar'
