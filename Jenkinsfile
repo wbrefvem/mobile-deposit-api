@@ -11,7 +11,7 @@ node('docker-cloud') {
     docker.image('kmadel/maven:3.3.3-jdk-8').inside('-v /data:/data') {
         sh "mvn -Dmaven.repo.local=/data/mvn/repo -DGIT_COMMIT='${short_commit}' -DBUILD_NUMBER=${env.BUILD_NUMBER} -DBUILD_URL=${env.BUILD_URL} clean package"
     }
-    step([$class: 'JUnitResultArchiver', testResults: '**/target/surefire-reports/TEST-*.xml'])
+    junit allowEmptyResults: true, testResults: '**/target/surefire-reports/TEST-*.xml'
     stash name: 'pom', includes: 'pom.xml'
     stash name: 'jar-dockerfile', includes: '**/target/*.jar,**/target/Dockerfile'
 }
