@@ -4,17 +4,25 @@ script {
 }
 
 pipeline {
+    options { buildDiscarder(logRotator(numToKeepStr: '5')) }
     agent { docker 'kmadel/maven:3.3.3-jdk-8' }
     stages {
         stage('Example Build') {
             steps {
-                sh 'mvn -B clean verify'
+                script {
+                    gitCommit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
+                    short_commit=git_commit.take(7)
+                }
+                sh 'mvn -DGIT_COMMIT='${short_commit}' -DBUILD_NUMBER=${env.BUILD_NUMBER} -DBUILD_URL=${env.BUILD_URL} clean verify'
             }
         }
     }
     post {
         success {
             hipchatSend color: 'GREEN', message: "${env.JOB_NAME} ${env.BUILD_NUMBER} status: ${currentBuild.result} <a href=\'${env.BUILD_URL}\'>Open</a>", room: '1613593', server: 'cloudbees.hipchat.com', credentialId: 'hipchat-sa-demo-environment', v2enabled: true
+        }
+        failure {
+            hipchatSend color: 'RED', message: "${env.JOB_NAME} ${env.BUILD_NUMBER} status: ${currentBuild.result} <a href=\'${env.BUILD_URL}\'>Open</a>", room: '1613593', server: 'cloudbees.hipchat.com', credentialId: 'hipchat-sa-demo-environment', v2enabled: true
         }
     }
 }
