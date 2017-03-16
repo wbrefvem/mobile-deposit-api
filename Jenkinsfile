@@ -47,9 +47,11 @@ pipeline {
             when {
                 branch 'declarative'
             }
-            unstash 'jar-dockerfile'
-            dir('target') {
-                    mobileDepositApiImage = docker.build "beedemo/mobile-deposit-api:${dockerTag}"
+            steps {
+                unstash 'jar-dockerfile'
+                dir('target') {
+                    mobileDepositApiImage = docker.build "beedemo/mobile-deposit-api:${DOCKER_TAG}"
+                }
             }
         }
     }
