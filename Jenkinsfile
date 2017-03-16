@@ -7,7 +7,7 @@ pipeline {
     options { buildDiscarder(logRotator(numToKeepStr: '5')) }
     agent { docker 'kmadel/maven:3.3.3-jdk-8' }
     stages {
-        stage('Example Build') {
+        stage('Build') {
             steps {
                 script {
                     git_commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
@@ -16,6 +16,7 @@ pipeline {
                     env.SHORT_COMMIT = short_commit
                 }
                 sh 'mvn -DGIT_COMMIT="${SHORT_COMMIT}" -DBUILD_NUMBER=${BUILD_NUMBER} -DBUILD_URL=${BUILD_URL} clean package'
+                stash name: 'jar-dockerfile', includes: '**/target/*.jar,**/target/Dockerfile'
             }
         }
         stage('Quality Analysis') {
@@ -33,10 +34,23 @@ pipeline {
                     },
                     "sonarAnalysis" : {
                         sh 'mvn -Dmaven.repo.local=/data/mvn/repo -Dsonar.scm.disabled=True -Dsonar.login=$SONAR sonar:sonar'
-                    }    
+                    }, failFast: true
                 )
             }
             
+        }
+        stage('Build Docker Image') {
+            agent { label 'docker-cloud' }
+			environment {
+				DOCKER_TAG = "${BUILD_NUMBER}-${SHORT_COMMIT}"
+			}
+            when {
+                branch 'declarative'
+            }
+            unstash 'jar-dockerfile'
+            dir('target') {
+                    mobileDepositApiImage = docker.build "beedemo/mobile-deposit-api:${dockerTag}"
+            }
         }
     }
     post {
