@@ -4,7 +4,6 @@ script {
 }
 
 pipeline {
-    options { buildDiscarder(logRotator(numToKeepStr: '5')) }
     agent { docker 'kmadel/maven:3.3.3-jdk-8' }
     stages {
         stage('Example Build') {
