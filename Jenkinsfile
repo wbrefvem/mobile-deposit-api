@@ -19,6 +19,9 @@ pipeline {
             }
         }
         stage('Quality Analysis') {
+			environment {
+				SONAR = credentials('sonar.beedemo')
+			}
             when {
                 expression { !env.BRANCH_NAME.startsWith("PR") }
             }
@@ -31,9 +34,6 @@ pipeline {
                     },
                     "sonarAnalysis" : {
                         agent { docker 'kmadel/maven:3.3.3-jdk-8' }
-            			environment {
-            				SONAR = credentials('sonar.beedemo')
-            			}
                         sh 'mvn -Dmaven.repo.local=/data/mvn/repo -Dsonar.scm.disabled=True -Dsonar.login=$SONAR sonar:sonar'
                     }    
                 )
