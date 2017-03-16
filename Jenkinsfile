@@ -22,7 +22,10 @@ pipeline {
             when {
                 expression { !env.BRANCH_NAME.startsWith("PR") }
             }
-            echo 'It worked!'
+            steps {
+                echo 'It worked!'
+            }
+            
         }
     }
     post {
