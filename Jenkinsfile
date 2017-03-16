@@ -50,7 +50,7 @@ pipeline {
             steps {
                 unstash 'jar-dockerfile'
                 dir('target') {
-                    mobileDepositApiImage = docker.build "beedemo/mobile-deposit-api:${DOCKER_TAG}"
+                   docker.build "beedemo/mobile-deposit-api:${DOCKER_TAG}"
                 }
             }
         }
