@@ -28,12 +28,10 @@ pipeline {
             steps {
                 parallel (
                     "integrationTests" : {
-                        agent { docker 'kmadel/maven:3.3.3-jdk-8' }
                         sh 'mvn -Dmaven.repo.local=/data/mvn/repo verify'
                         
                     },
                     "sonarAnalysis" : {
-                        agent { docker 'kmadel/maven:3.3.3-jdk-8' }
                         sh 'mvn -Dmaven.repo.local=/data/mvn/repo -Dsonar.scm.disabled=True -Dsonar.login=$SONAR sonar:sonar'
                     }    
                 )
