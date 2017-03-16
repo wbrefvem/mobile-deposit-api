@@ -10,7 +10,7 @@ pipeline {
         stage('Example Build') {
             steps {
                 script {
-                    gitCommit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
+                    git_commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
                     short_commit=git_commit.take(7)
                 }
                 sh 'mvn -DGIT_COMMIT="${short_commit}" -DBUILD_NUMBER=${BUILD_NUMBER} -DBUILD_URL=${BUILD_URL} clean verify'
