@@ -13,8 +13,9 @@ pipeline {
                     git_commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
                     short_commit=git_commit.take(7)
                     echo short_commit
+                    env.SHORT_COMMIT = short_commit
                 }
-                sh 'mvn -DGIT_COMMIT="${short_commit}" -DBUILD_NUMBER=${BUILD_NUMBER} -DBUILD_URL=${BUILD_URL} clean verify'
+                sh 'mvn -DGIT_COMMIT="${SHORT_COMMIT}" -DBUILD_NUMBER=${BUILD_NUMBER} -DBUILD_URL=${BUILD_URL} clean verify'
             }
         }
     }
