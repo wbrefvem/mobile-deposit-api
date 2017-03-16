@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('Example Build') {
             steps {
-                sh 'mvn -DGIT_COMMIT=${short_commit} -DBUILD_NUMBER=${BUILD_NUMBER} -DBUILD_URL=${BUILD_URL} clean verify'
+                sh 'mvn clean verify'
             }
         }
     }
