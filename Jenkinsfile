@@ -15,7 +15,7 @@ pipeline {
                     echo short_commit
                     env.SHORT_COMMIT = short_commit
                 }
-                sh 'mvn -DGIT_COMMIT="${SHORT_COMMIT}" -DBUILD_NUMBER=${BUILD_NUMBER} -DBUILD_URL=${BUILD_URL} clean verify'
+                sh 'mvn -DGIT_COMMIT="${SHORT_COMMIT}" -DBUILD_NUMBER=${BUILD_NUMBER} -DBUILD_URL=${BUILD_URL} clean package'
             }
         }
         stage('Quality Analysis') {
@@ -23,7 +23,20 @@ pipeline {
                 expression { !env.BRANCH_NAME.startsWith("PR") }
             }
             steps {
-                echo 'It worked!'
+                parallel (
+                    "integrationTests" : {
+                        agent { docker 'kmadel/maven:3.3.3-jdk-8' }
+                        sh 'mvn -Dmaven.repo.local=/data/mvn/repo verify'
+                        
+                    },
+                    "sonarAnalysis" : {
+                        agent { docker 'kmadel/maven:3.3.3-jdk-8' }
+            			environment {
+            				SONAR = credentials('sonar.beedemo')
+            			}
+                        sh 'mvn -Dmaven.repo.local=/data/mvn/repo -Dsonar.scm.disabled=True -Dsonar.login=$SONAR sonar:sonar'
+                    }    
+                )
             }
             
         }
