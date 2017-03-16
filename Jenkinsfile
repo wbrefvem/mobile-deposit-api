@@ -8,7 +8,7 @@ pipeline {
     stages {
         stage('Example Build') {
             steps {
-                sh 'mvn clean verify'
+                echo 'build'
             }
         }
     }
