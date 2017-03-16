@@ -18,6 +18,12 @@ pipeline {
                 sh 'mvn -DGIT_COMMIT="${SHORT_COMMIT}" -DBUILD_NUMBER=${BUILD_NUMBER} -DBUILD_URL=${BUILD_URL} clean verify'
             }
         }
+        stage('Quality Analysis') {
+            when {
+                expression { !env.BRANCH_NAME.startsWith("PR") }
+            }
+            echo 'It worked!'
+        }
     }
     post {
         success {
