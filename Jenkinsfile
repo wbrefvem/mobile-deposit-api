@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('Build') {
             steps {
-                script {
+                script { //move to Global Lib
                     git_commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
                     short_commit=git_commit.take(7)
                     echo short_commit
@@ -49,9 +49,11 @@ pipeline {
             }
             steps {
                 unstash 'jar-dockerfile'
-                docker.build("beedemo/mobile-deposit-api:${DOCKER_TAG}", 'target')
-                withDockerRegistry(registry: [credentialsId: 'docker-hub-beedemo']) { 
-                    image("beedemo/mobile-deposit-api:${DOCKER_TAG}").push()
+                script{
+                    mobileDepositApiImage = docker.build("beedemo/mobile-deposit-api:${DOCKER_TAG}", 'target')
+                    withDockerRegistry(registry: [credentialsId: 'docker-hub-beedemo']) { 
+                        mobileDepositApiImage.push()
+                    }
                 }
             }
         }
