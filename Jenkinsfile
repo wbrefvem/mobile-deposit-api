@@ -47,7 +47,7 @@ pipeline {
             environment {
                 DOCKER_TAG = "${BUILD_NUMBER}-${SHORT_COMMIT}"
             }
-            agent { none }
+            agent none
             when {
                 branch 'declarative'
             }
