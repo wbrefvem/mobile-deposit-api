@@ -79,7 +79,7 @@ if(env.BRANCH_NAME=="master"){
   checkpoint 'Build Complete'
     stage 'Deploy to Prod'
     //using global library to deploy to docker cloud: params are (org, name, innerPort, outerPort, imageTag)
-    dockerDeploy("beedemo", 'mobile-deposit-api', 8080, 8080, "$dockerTag")
+    dockerDeploy("docker-cloud","beedemo", 'mobile-deposit-api', 8080, 8080, "$dockerTag")
 }
 
 node('docker-cloud') {
