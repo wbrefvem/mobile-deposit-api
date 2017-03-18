@@ -66,9 +66,7 @@ if(env.BRANCH_NAME=="master"){
     def mobileDepositApiImage
     //unstash Spring Boot JAR and Dockerfile
     unstash 'jar-dockerfile'
-    dir('target') {
-        mobileDepositApiImage = docker.build "beedemo/mobile-deposit-api:${dockerTag}"
-    }
+    mobileDepositApiImage = docker.build("beedemo/mobile-deposit-api:${dockerTag}", 'target')
     
     stage 'Publish Docker Image'
     sh "docker -v"
