@@ -49,11 +49,8 @@ pipeline {
             }
             steps {
                 unstash 'jar-dockerfile'
-                dir('target') {
-                   docker.build "beedemo/mobile-deposit-api:${DOCKER_TAG}"
-                }
                 withDockerRegistry(registry: [credentialsId: 'docker-hub-beedemo']) { 
-                    mobileDepositApiImage.push()
+                   docker.build("beedemo/mobile-deposit-api:${DOCKER_TAG}","target").push
                 }
             }
         }
