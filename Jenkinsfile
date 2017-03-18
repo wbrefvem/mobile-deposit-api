@@ -4,18 +4,22 @@ script {
 }
 
 pipeline {
-    options { buildDiscarder(logRotator(numToKeepStr: '5')) }
+    options { 
+        buildDiscarder(logRotator(numToKeepStr: '5')) 
+        skipDefaultCheckout() 
+    }
     agent { docker 'kmadel/maven:3.3.3-jdk-8' }
     stages {
         stage('Build') {
             steps {
+                checkout scm
                 script { //move to Global Lib
                     git_commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
                     short_commit=git_commit.take(7)
-                    echo short_commit
                     env.SHORT_COMMIT = short_commit
                 }
                 sh 'mvn -DGIT_COMMIT="${SHORT_COMMIT}" -DBUILD_NUMBER=${BUILD_NUMBER} -DBUILD_URL=${BUILD_URL} clean package'
+                junit allowEmptyResults: true, testResults: '**/target/surefire-reports/TEST-*.xml'
                 stash name: 'jar-dockerfile', includes: '**/target/*.jar,**/target/Dockerfile'
             }
         }
@@ -40,19 +44,21 @@ pipeline {
             
         }
         stage('Build & Publish Docker Image') {
-            agent { label 'docker-cloud' }
             environment {
                 DOCKER_TAG = "${BUILD_NUMBER}-${SHORT_COMMIT}"
             }
+            agent { none }
             when {
                 branch 'declarative'
             }
             steps {
                 unstash 'jar-dockerfile'
                 script{
-                    mobileDepositApiImage = docker.build("beedemo/mobile-deposit-api:${DOCKER_TAG}", 'target')
-                    withDockerRegistry(registry: [credentialsId: 'docker-hub-beedemo']) { 
-                        mobileDepositApiImage.push()
+                    node('docker-cloud') {
+                        mobileDepositApiImage = docker.build("beedemo/mobile-deposit-api:${DOCKER_TAG}", 'target')
+                        withDockerRegistry(registry: [credentialsId: 'docker-hub-beedemo']) { 
+                            mobileDepositApiImage.push()
+                        }
                     }
                 }
             }
