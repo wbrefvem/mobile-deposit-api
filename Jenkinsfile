@@ -47,18 +47,17 @@ pipeline {
             environment {
                 DOCKER_TAG = "${BUILD_NUMBER}-${SHORT_COMMIT}"
             }
-            agent none
+            agent { label 'docker-cloud' }
             when {
                 branch 'declarative'
             }
             steps {
+                sh 'docker -version'
                 unstash 'jar-dockerfile'
                 script{
-                    node('docker-cloud') {
-                        mobileDepositApiImage = docker.build("beedemo/mobile-deposit-api:${DOCKER_TAG}", 'target')
-                        withDockerRegistry(registry: [credentialsId: 'docker-hub-beedemo']) { 
-                            mobileDepositApiImage.push()
-                        }
+                    mobileDepositApiImage = docker.build("beedemo/mobile-deposit-api:${DOCKER_TAG}", 'target')
+                    withDockerRegistry(registry: [credentialsId: 'docker-hub-beedemo']) { 
+                        mobileDepositApiImage.push()
                     }
                 }
             }
