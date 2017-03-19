@@ -8,9 +8,10 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '5')) 
         skipDefaultCheckout() 
     }
-    agent { docker 'kmadel/maven:3.3.3-jdk-8' }
+    agent none
     stages {
         stage('Build') {
+            agent { docker 'kmadel/maven:3.3.3-jdk-8' }
             steps {
                 checkout scm
                 script { //move to Global Lib
@@ -24,9 +25,13 @@ pipeline {
             }
         }
         stage('Quality Analysis') {
-			environment {
-				SONAR = credentials('sonar.beedemo')
-			}
+            agent { 
+                docker 'kmadel/maven:3.3.3-jdk-8' 
+                reuseNode true
+            }
+            environment {
+                SONAR = credentials('sonar.beedemo')
+            }
             when {
                 expression { !env.BRANCH_NAME.startsWith("PR") }
             }
