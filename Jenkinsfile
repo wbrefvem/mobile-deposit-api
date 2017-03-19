@@ -25,7 +25,12 @@ pipeline {
             }
         }
         stage('Quality Analysis') {
-            agent { docker { image 'kmadel/maven:3.3.3-jdk-8' reuseNode true } }
+            agent { 
+                docker { 
+                    image 'kmadel/maven:3.3.3-jdk-8' 
+                    reuseNode true 
+                } 
+            }
             environment {
                 SONAR = credentials('sonar.beedemo')
             }
