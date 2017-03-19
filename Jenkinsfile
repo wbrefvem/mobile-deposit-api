@@ -59,7 +59,7 @@ pipeline {
                 branch 'declarative'
             }
             steps {
-                sh 'docker -version'
+                sh 'docker version'
                 unstash 'jar-dockerfile'
                 script{
                     mobileDepositApiImage = docker.build("beedemo/mobile-deposit-api:${DOCKER_TAG}", 'target')
