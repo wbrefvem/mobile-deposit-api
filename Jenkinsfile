@@ -56,7 +56,7 @@ pipeline {
             }
             agent { label 'docker-cloud' }
             when {
-                branch 'declarative'
+                branch 'master'
             }
             steps {
                 sh 'docker version'
@@ -69,7 +69,7 @@ pipeline {
                 DOCKER_TAG = "${BUILD_NUMBER}-${SHORT_COMMIT}"
             }
             when {
-                branch 'declarative'
+                branch 'master'
             }
             steps {
                 dockerDeploy("docker-cloud","beedemo", 'mobile-deposit-api', 8080, 8080, "${DOCKER_TAG}")
