@@ -1,91 +1,88 @@
-def buildVersion = null
-def short_commit = null
-echo "Building ${env.BRANCH_NAME}"
-properties([[$class: 'BuildDiscarderProperty', strategy: [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5']]])
-stage 'Build'
-node('docker-cloud') {
-    checkout scm
-    sh('git rev-parse HEAD > GIT_COMMIT')
-    git_commit=readFile('GIT_COMMIT')
-    short_commit=git_commit.take(7)
-    docker.image('kmadel/maven:3.3.3-jdk-8').inside('-v /data:/data') {
-        sh "mvn -Dmaven.repo.local=/data/mvn/repo -DGIT_COMMIT='${short_commit}' -DBUILD_NUMBER=${env.BUILD_NUMBER} -DBUILD_URL=${env.BUILD_URL} clean package"
-    }
-    junit allowEmptyResults: true, testResults: '**/target/surefire-reports/TEST-*.xml'
-    stash name: 'pom', includes: 'pom.xml'
-    stash name: 'jar-dockerfile', includes: '**/target/*.jar,**/target/Dockerfile'
+script {
+    def buildVersion = null
+    def short_commit = null
 }
 
-if(!env.BRANCH_NAME.startsWith("PR")){
-  checkpoint 'Build Complete'
-  stage 'Quality Analysis'
-  node('docker-cloud') {
-    try {
-    unstash 'pom'
-    //test in paralell
-    parallel(
-        integrationTests: {
-            docker.image('kmadel/maven:3.3.3-jdk-8').inside('-v /data:/data') {
-                sh 'mvn -Dmaven.repo.local=/data/mvn/repo verify'
-            }
-        }, sonarAnalysis: {
-            withCredentials([[$class: 'StringBinding', credentialsId: 'sonar.beedemo', variable: 'TOKEN']]) {
-                echo 'running sonar tests'
-                docker.image('kmadel/maven:3.3.3-jdk-8').inside('-v /data:/data') {
-                    sh 'mvn -Dmaven.repo.local=/data/mvn/repo -Dsonar.scm.disabled=True -Dsonar.login=$TOKEN sonar:sonar'
+pipeline {
+    options { 
+        buildDiscarder(logRotator(numToKeepStr: '5')) 
+        skipDefaultCheckout() 
+    }
+    agent none
+    stages {
+        stage('Build') {
+            agent { docker 'kmadel/maven:3.3.3-jdk-8' }
+            steps {
+                checkout scm
+                script { //move to Global Lib
+                    git_commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
+                    short_commit=git_commit.take(7)
+                    env.SHORT_COMMIT = short_commit
                 }
-                echo 'finished sonar tests'
+                sh 'mvn -DGIT_COMMIT="${SHORT_COMMIT}" -DBUILD_NUMBER=${BUILD_NUMBER} -DBUILD_URL=${BUILD_URL} clean package'
+                junit allowEmptyResults: true, testResults: '**/target/surefire-reports/TEST-*.xml'
+                stash name: 'jar-dockerfile', includes: '**/target/*.jar,**/target/Dockerfile'
             }
-        }, failFast: true
-    )
-    } catch (x) {
-      currentBuild.result = "failed"
-      step([$class: 'GitHubCommitStatusSetter', contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: 'Jenkins']])
-      hipchatSend color: 'RED', message: "${env.JOB_NAME} ${env.BUILD_NUMBER} status: ${currentBuild.result} <a href=\'${env.BUILD_URL}\'>Open</a>", room: '1613593', server: 'cloudbees.hipchat.com', token: 'A6YX8LxNc4wuNiWUn6qHacfO1bBSGXQ6E1lELi1z', v2enabled: true
-      mail body: "Job '${env.JOB_NAME}' has failed.  See <a href=\"${env.BUILD_URL}\">logs</a> for details.", mimeType: 'text/html', subject: "${env.JOB_NAME} FAILURE", to: 'kmadel@cloudbees.com'
-      throw x
+        }
+        stage('Quality Analysis') {
+            agent { 
+                docker { 
+                    image 'kmadel/maven:3.3.3-jdk-8' 
+                    reuseNode true 
+                } 
+            }
+            environment {
+                SONAR = credentials('sonar.beedemo')
+            }
+            when {
+                expression { !env.BRANCH_NAME.startsWith("PR") }
+            }
+            steps {
+                parallel (
+                    "integrationTests" : {
+                        sh 'mvn -Dmaven.repo.local=/data/mvn/repo verify'
+                        
+                    },
+                    "sonarAnalysis" : {
+                        sh 'mvn -Dmaven.repo.local=/data/mvn/repo -Dsonar.scm.disabled=True -Dsonar.login=$SONAR sonar:sonar'
+                    }, failFast: true
+                )
+            }
+            
+        }
+        stage('Build & Push Docker Image') {
+            environment {
+                DOCKER_TAG = "${BUILD_NUMBER}-${SHORT_COMMIT}"
+            }
+            agent { label 'docker-cloud' }
+            when {
+                branch 'master'
+            }
+            steps {
+                sh 'docker version'
+                unstash 'jar-dockerfile'
+                dockerBuildPush("beedemo", "mobile-deposit-api", "${DOCKER_TAG}", "target", "docker-hub-beedemo")
+            }
+        }
+        stage('Deploy') {
+            environment {
+                DOCKER_TAG = "${BUILD_NUMBER}-${SHORT_COMMIT}"
+            }
+            when {
+                branch 'master'
+            }
+            steps {
+                dockerDeploy("docker-cloud","beedemo", 'mobile-deposit-api', 8080, 8080, "${DOCKER_TAG}")
+            }
+        }
     }
-  }
+    post {
+        success {
+            hipchatSend color: 'GREEN', message: "${env.JOB_NAME} ${env.BUILD_NUMBER} status: SUCCESS <a href=\'${env.BUILD_URL}\'>Open</a>", room: '1613593', server: 'cloudbees.hipchat.com', credentialId: 'hipchat-sa-demo-environment', v2enabled: true
+        }
+        failure {
+            hipchatSend color: 'RED', message: "${env.JOB_NAME} ${env.BUILD_NUMBER} status: FAILURE <a href=\'${env.BUILD_URL}\'>Open</a>", room: '1613593', server: 'cloudbees.hipchat.com', credentialId: 'hipchat-sa-demo-environment', v2enabled: true
+        }
+    }
 }
 
-if(env.BRANCH_NAME=="master"){
-  checkpoint 'Quality Analysis Complete'
-  def dockerTag = "${env.BUILD_NUMBER}-${short_commit}"
-  stage name: 'Version Release', concurrency: 1
-  node('docker-cloud') {
-    unstash 'pom'
-
-    def matcher = readFile('pom.xml') =~ '<version>(.+)</version>'
-    if (matcher) {
-        buildVersion = matcher[0][1]
-        echo "Release version: ${buildVersion}"
-    }
-    matcher = null
-
-    stage 'Build Docker Image'
-    def mobileDepositApiImage
-    //unstash Spring Boot JAR and Dockerfile
-    unstash 'jar-dockerfile'
-    mobileDepositApiImage = docker.build("beedemo/mobile-deposit-api:${dockerTag}", 'target')
-    
-    stage 'Publish Docker Image'
-    sh "docker -v"
-    //use withDockerRegistry to make sure we are logged in to docker hub registry
-    withDockerRegistry(registry: [credentialsId: 'docker-hub-beedemo']) { 
-      mobileDepositApiImage.push()
-    }
-  }
-  //set checkpoint before deployment
-  checkpoint 'Build Complete'
-    stage 'Deploy to Prod'
-    //using global library to deploy to docker cloud: params are (org, name, innerPort, outerPort, imageTag)
-    dockerDeploy("docker-cloud","beedemo", 'mobile-deposit-api', 8080, 8080, "$dockerTag")
-}
-
-node('docker-cloud') {
-  //send commit status to GitHub
-  step([$class: 'GitHubCommitStatusSetter', contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: 'Jenkins'], statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'BetterThanOrEqualBuildResult', message: 'Pipeline completed successfully', result: 'SUCCESS', state: 'SUCCESS']]]])
-  //update hipchat with success
-  currentBuild.result = "success"
-  hipchatSend color: 'GREEN', message: "${env.JOB_NAME} ${env.BUILD_NUMBER} status: ${currentBuild.result} <a href=\'${env.BUILD_URL}\'>Open</a>", room: '1613593', server: 'cloudbees.hipchat.com', token: 'A6YX8LxNc4wuNiWUn6qHacfO1bBSGXQ6E1lELi1z', v2enabled: true
-}
