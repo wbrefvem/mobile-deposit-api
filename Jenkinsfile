@@ -69,6 +69,17 @@ pipeline {
                 }
             }
         }
+        stage('Deploy') {
+            environment {
+                DOCKER_TAG = "${BUILD_NUMBER}-${SHORT_COMMIT}"
+            }
+            when {
+                branch 'declarative'
+            }
+            steps {
+                dockerDeploy("docker-cloud","beedemo", 'mobile-deposit-api', 8080, 8080, "${DOCKER_TAG}")
+            }
+        }
     }
     post {
         success {
