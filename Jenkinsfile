@@ -50,7 +50,7 @@ pipeline {
             }
             
         }
-        stage('Build & Publish Docker Image') {
+        stage('Build & Push Docker Image') {
             environment {
                 DOCKER_TAG = "${BUILD_NUMBER}-${SHORT_COMMIT}"
             }
@@ -61,12 +61,7 @@ pipeline {
             steps {
                 sh 'docker version'
                 unstash 'jar-dockerfile'
-                script{
-                    mobileDepositApiImage = docker.build("beedemo/mobile-deposit-api:${DOCKER_TAG}", 'target')
-                    withDockerRegistry(registry: [credentialsId: 'docker-hub-beedemo']) { 
-                        mobileDepositApiImage.push()
-                    }
-                }
+                dockerBuildPush("beedemo", "mobile-deposit-api", "${DOCKER_TAG}", "target", "docker-hub-beedemo")
             }
         }
         stage('Deploy') {
