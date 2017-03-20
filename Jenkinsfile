@@ -11,7 +11,7 @@ pipeline {
     agent none
     stages {
         stage('Build') {
-            agent { docker 'kmadel/maven:3.3.3-jdk-8' }
+            agent { docker 'maven:3.3.9-jdk-8-alpine' }
             steps {
                 checkout scm
                 gitShortCommit(7)
@@ -23,7 +23,7 @@ pipeline {
         stage('Quality Analysis') {
             agent { 
                 docker { 
-                    image 'kmadel/maven:3.3.3-jdk-8' 
+                    image 'maven:3.3.9-jdk-8-alpine' 
                     reuseNode true 
                 } 
             }
