@@ -34,9 +34,6 @@ pipeline {
         }
         stage('Build') {
             agent { docker 'beedemo/mobile-depoist-api-mvn-cache' }
-            when {
-                expression { !BRANCH_NAME == "maven-build-cache" }
-            }
             steps {
                 checkout scm
                 gitShortCommit(7)
