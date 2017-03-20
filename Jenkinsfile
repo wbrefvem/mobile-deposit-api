@@ -17,8 +17,12 @@ pipeline {
             }
             steps {
                 checkout scm
-                    catchError {
-                        sh "docker rm -f mvn-cache"
+                    script {
+                        try {
+                            sh "docker rm -f mvn-cache"
+                        } catch (e) {
+                            echo "nothing to clean up"
+                        }
                     }
                 sh "docker run --name mvn-cache -v ${WORKSPACE}:${WORKSPACE} -w ${WORKSPACE} maven:3.3.9-jdk-8-alpine mvn -Dmaven.repo.local=/usr/share/maven/ref clean package"
                 //create a repo specific build image based on previous run
@@ -52,7 +56,7 @@ pipeline {
                 SONAR = credentials('sonar.beedemo')
             }
             when {
-                expression { !BRANCH_NAME.startsWith("PR") && !BRANCH_NAME == "maven-build-cache" }
+                expression { !(BRANCH_NAME.startsWith("PR") || BRANCH_NAME == "maven-build-cache") }
             }
             steps {
                 parallel (
