@@ -31,7 +31,7 @@ pipeline {
                 SONAR = credentials('sonar.beedemo')
             }
             when {
-                expression { !env.BRANCH_NAME.startsWith("PR") }
+                expression { !BRANCH_NAME.startsWith("PR") }
             }
             steps {
                 parallel (
