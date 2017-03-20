@@ -10,12 +10,29 @@ pipeline {
     }
     agent none
     stages {
+        stage('Create Build Cache') {
+            agent { label 'docker-cloud' }
+            when {
+                branch 'maven-build-cache'
+            }
+            steps {
+                sh "docker run --name mvn-cache -v ${WORKSPACE}:${WORKSPACE} -w ${WORKSPACE} maven:3.3.9-jdk-8-alpine mvn -Dmaven.repo.local=/usr/share/maven/ref clean package"
+                //create a repo specific build image based on previous run
+                sh "docker commit mvn-cache beedemo/mobile-depoist-api-mvn-cache"
+                sh "docker rm -f mvn-cache"
+                //sign in to registry
+                withDockerRegistry(registry: [credentialsId: 'docker-hub-beedemo']) { 
+                    //push repo specific image to Docker registry (DockerHub in this case)
+                    sh "docker push beedemo/mobile-depoist-api-mvn-cache"
+                }
+            }
+        }
         stage('Build') {
-            agent { docker 'maven:3.3.9-jdk-8-alpine' }
+            agent { docker 'beedemo/mobile-depoist-api-mvn-cache' }
             steps {
                 checkout scm
                 gitShortCommit(7)
-                sh 'mvn -DGIT_COMMIT="${SHORT_COMMIT}" -DBUILD_NUMBER=${BUILD_NUMBER} -DBUILD_URL=${BUILD_URL} clean package'
+                sh 'mvn -Dmaven.repo.local=/usr/share/maven/ref -DGIT_COMMIT="${SHORT_COMMIT}" -DBUILD_NUMBER=${BUILD_NUMBER} -DBUILD_URL=${BUILD_URL} clean package'
                 junit allowEmptyResults: true, testResults: '**/target/surefire-reports/TEST-*.xml'
                 stash name: 'jar-dockerfile', includes: '**/target/*.jar,**/target/Dockerfile'
             }
@@ -23,7 +40,7 @@ pipeline {
         stage('Quality Analysis') {
             agent { 
                 docker { 
-                    image 'maven:3.3.9-jdk-8-alpine' 
+                    image 'beedemo/mobile-depoist-api-mvn-cache' 
                     reuseNode true 
                 } 
             }
@@ -36,11 +53,11 @@ pipeline {
             steps {
                 parallel (
                     "integrationTests" : {
-                        sh 'mvn -Dmaven.repo.local=/data/mvn/repo verify'
+                        sh 'mvn -Dmaven.repo.local=/usr/share/maven/ref verify'
                         
                     },
                     "sonarAnalysis" : {
-                        sh 'mvn -Dmaven.repo.local=/data/mvn/repo -Dsonar.scm.disabled=True -Dsonar.login=$SONAR sonar:sonar'
+                        sh 'mvn -Dmaven.repo.local=/usr/share/maven/ref -Dsonar.scm.disabled=True -Dsonar.login=$SONAR sonar:sonar'
                     }, failFast: true
                 )
             }
