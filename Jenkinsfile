@@ -14,11 +14,7 @@ pipeline {
             agent { docker 'kmadel/maven:3.3.3-jdk-8' }
             steps {
                 checkout scm
-                script { //move to Global Lib
-                    git_commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
-                    short_commit=git_commit.take(7)
-                    env.SHORT_COMMIT = short_commit
-                }
+                gitShortCommit(7)
                 sh 'mvn -DGIT_COMMIT="${SHORT_COMMIT}" -DBUILD_NUMBER=${BUILD_NUMBER} -DBUILD_URL=${BUILD_URL} clean package'
                 junit allowEmptyResults: true, testResults: '**/target/surefire-reports/TEST-*.xml'
                 stash name: 'jar-dockerfile', includes: '**/target/*.jar,**/target/Dockerfile'
