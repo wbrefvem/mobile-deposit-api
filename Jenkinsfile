@@ -17,19 +17,7 @@ pipeline {
             }
             steps {
                 checkout scm
-                catchError {
-                    sh "docker rm -f mvn-cache"
-                    sh "docker rmi -f beedemo/mobile-depoist-api-mvn-cache"
-                }
-                sh "docker run --name mvn-cache -v ${WORKSPACE}:${WORKSPACE} -w ${WORKSPACE} maven:3.3.9-jdk-8-alpine mvn -Dmaven.repo.local=/usr/share/maven/ref clean package"
-                //create a repo specific build image based on previous run
-                sh "docker commit mvn-cache beedemo/mobile-depoist-api-mvn-cache"
-                sh "docker rm -f mvn-cache"
-                //sign in to registry
-                withDockerRegistry(registry: [credentialsId: 'docker-hub-beedemo']) { 
-                    //push repo specific image to Docker registry (DockerHub in this case)
-                    sh "docker push beedemo/mobile-depoist-api-mvn-cache"
-                }
+                buildMavenCacheImage("beedemo", "mobile-depoist-api-mvn-cache", "docker-hub-beedemo")
             }
         }
         stage('Build') {
@@ -53,7 +41,7 @@ pipeline {
                 SONAR = credentials('sonar.beedemo')
             }
             when {
-                expression { !BRANCH_NAME.startsWith("PR") && !BRANCH_NAME == "maven-build-cache"}
+                expression { !(BRANCH_NAME.startsWith("PR") || BRANCH_NAME == "maven-build-cache") }
             }
             steps {
                 parallel (
