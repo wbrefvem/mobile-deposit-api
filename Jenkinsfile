@@ -10,27 +10,31 @@ pipeline {
     }
     agent none
     stages {
+        stage('Checkout') {
+            agent { label 'docker-cloud' }
+            steps {
+                checkout scm
+                gitShortCommit(7)
+            }
+        }
         stage('Create Build Cache') {
             agent { label 'docker-cloud' }
             when {
                 branch 'maven-build-cache'
             }
             steps {
-                checkout scm
                 buildMavenCacheImage("beedemo", "mobile-depoist-api-mvn-cache", "docker-hub-beedemo")
             }
         }
         stage('Build') {
-            agent { label 'docker-cloud' }
+            agent { 
+                docker { 
+                    image 'beedemo/mobile-depoist-api-mvn-cache' 
+                    reuseNode true 
+                } 
+            }
             steps {
-                checkout scm
-                gitShortCommit(7)
-                //want to reuse git from agent, not possible when doing declarative with docker agent
-                script {
-                    docker.image('beedemo/mobile-depoist-api-mvn-cache').inside() {
-                        sh 'mvn -Dmaven.repo.local=/usr/share/maven/ref -DGIT_COMMIT="${SHORT_COMMIT}" -DBUILD_NUMBER=${BUILD_NUMBER} -DBUILD_URL=${BUILD_URL} clean package'
-                    }
-                }
+                sh 'mvn -Dmaven.repo.local=/usr/share/maven/ref -DGIT_COMMIT="${SHORT_COMMIT}" -DBUILD_NUMBER=${BUILD_NUMBER} -DBUILD_URL=${BUILD_URL} clean package'
                 junit allowEmptyResults: true, testResults: '**/target/surefire-reports/TEST-*.xml'
                 stash name: 'jar-dockerfile', includes: '**/target/*.jar,**/target/Dockerfile'
             }
