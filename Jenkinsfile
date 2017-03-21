@@ -17,30 +17,7 @@ pipeline {
             }
             steps {
                 checkout scm
-                script {
-                    try {
-                        sh "docker rm -f mvn-cache"
-                    } catch (e) {
-                        echo "nothing to clean up"
-                    }
-                }
-                sh "docker run --name mvn-cache -v ${WORKSPACE}:${WORKSPACE} -w ${WORKSPACE} maven:3.3.9-jdk-8-alpine mvn -Dmaven.repo.local=/usr/share/maven/ref clean package"
-                script {
-                    try {
-                        //create a repo specific build image based on previous run
-                        sh "docker commit mvn-cache beedemo/mobile-depoist-api-mvn-cache"
-                        sh "docker rm -f mvn-cache"
-                    } catch (e) {
-                        echo e
-                        echo "error stopping and removing container"
-                    }
-                }
-                //sign in to registry
-                withDockerRegistry(registry: [credentialsId: 'docker-hub-beedemo']) { 
-                    //push repo specific image to Docker registry (DockerHub in this case)
-                    sh "docker push beedemo/mobile-depoist-api-mvn-cache"
-                }
-            }
+                buildMaventCacheImage("beedemo", "mobile-depoist-api-mvn-cache", "docker-hub-beedemo")
         }
         stage('Build') {
             agent { docker 'beedemo/mobile-depoist-api-mvn-cache' }
