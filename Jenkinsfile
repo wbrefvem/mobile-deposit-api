@@ -18,6 +18,7 @@ pipeline {
             steps {
                 checkout scm
                 buildMaventCacheImage("beedemo", "mobile-depoist-api-mvn-cache", "docker-hub-beedemo")
+            }
         }
         stage('Build') {
             agent { docker 'beedemo/mobile-depoist-api-mvn-cache' }
