@@ -26,8 +26,10 @@ pipeline {
                 checkout scm
                 gitShortCommit(7)
                 //want to reuse git from agent, not possible when doing declarative with docker agent
-                docker.image('beedemo/mobile-depoist-api-mvn-cache').inside() {
-                    sh 'mvn -Dmaven.repo.local=/usr/share/maven/ref -DGIT_COMMIT="${SHORT_COMMIT}" -DBUILD_NUMBER=${BUILD_NUMBER} -DBUILD_URL=${BUILD_URL} clean package'
+                script {
+                    docker.image('beedemo/mobile-depoist-api-mvn-cache').inside() {
+                        sh 'mvn -Dmaven.repo.local=/usr/share/maven/ref -DGIT_COMMIT="${SHORT_COMMIT}" -DBUILD_NUMBER=${BUILD_NUMBER} -DBUILD_URL=${BUILD_URL} clean package'
+                    }
                 }
                 junit allowEmptyResults: true, testResults: '**/target/surefire-reports/TEST-*.xml'
                 stash name: 'jar-dockerfile', includes: '**/target/*.jar,**/target/Dockerfile'
