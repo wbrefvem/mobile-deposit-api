@@ -1,6 +1,7 @@
 script {
     def buildVersion = null
     def short_commit = null
+    env.SHORT_COMMIT = "NA"
 }
 
 pipeline {
