@@ -79,7 +79,6 @@ pipeline {
                 dockerBuildPush("beedemo", "mobile-deposit-api", "${DOCKER_TAG}", "target", "docker-hub-beedemo")
             }
         }
-        checkpoint 'pre-deploy'
         stage('Deploy') {
             environment {
                 DOCKER_TAG = "${BUILD_NUMBER}-${SHORT_COMMIT}"
@@ -88,6 +87,7 @@ pipeline {
                 branch 'master'
             }
             steps {
+                checkpoint 'pre-deploy'
                 dockerDeploy("docker-cloud","beedemo", 'mobile-deposit-api', 8080, 8080, "${DOCKER_TAG}")
             }
         }
