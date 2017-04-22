@@ -1,14 +1,13 @@
-script {
-    def buildVersion = null
-    def short_commit = null
-}
-
 pipeline {
     options { 
         buildDiscarder(logRotator(numToKeepStr: '5')) 
         skipDefaultCheckout() 
     }
     agent none
+    environment {
+        DOCKER_HUB_USER = 'beedemo'
+        DOCKER_CREDENTIAL_ID = 'docker-hub-beedemo'
+    }
     stages {
         stage('Checkout') {
             agent { label 'docker-cloud' }
@@ -23,7 +22,7 @@ pipeline {
                 branch 'maven-build-cache'
             }
             steps {
-                buildMavenCacheImage("beedemo", "mobile-depoist-api-mvn-cache", "docker-hub-beedemo")
+                buildMavenCacheImage($DOCKER_HUB_USER, "mobile-depoist-api-mvn-cache", $DOCKER_CREDENTIAL_ID)
             }
         }
         stage('Build') {
@@ -32,6 +31,11 @@ pipeline {
                     image 'beedemo/mobile-depoist-api-mvn-cache' 
                     reuseNode true 
                 } 
+            }
+            when {
+                not {
+                    branch 'maven-build-cache'
+                }
             }
             steps {
                 sh 'mvn -Dmaven.repo.local=/usr/share/maven/ref -DGIT_COMMIT="${SHORT_COMMIT}" -DBUILD_NUMBER=${BUILD_NUMBER} -DBUILD_URL=${BUILD_URL} clean package'
@@ -50,7 +54,12 @@ pipeline {
                 SONAR = credentials('sonar.beedemo')
             }
             when {
-                expression { !(BRANCH_NAME.startsWith("PR") || BRANCH_NAME == "maven-build-cache") }
+                not {
+                    anyOf {
+                        expression { BRANCH_NAME.startsWith("PR") }
+                        branch "maven-build-cache"
+                    }
+                }
             }
             steps {
                 parallel (
@@ -76,7 +85,7 @@ pipeline {
             steps {
                 sh 'docker version'
                 unstash 'jar-dockerfile'
-                dockerBuildPush("beedemo", "mobile-deposit-api", "${DOCKER_TAG}", "target", "docker-hub-beedemo")
+                dockerBuildPush($DOCKER_HUB_USER, "mobile-deposit-api", "${DOCKER_TAG}", "target", $DOCKER_CREDENTIAL_ID)
             }
         }
         stage('Deploy') {
@@ -87,7 +96,9 @@ pipeline {
                 branch 'master'
             }
             steps {
-                dockerDeploy("docker-cloud","beedemo", 'mobile-deposit-api', 8080, 8080, "${DOCKER_TAG}")
+                slack color: "warning" message: "${env.JOB_NAME} awaiting approval at: ${env.BUILD_URL}"
+                input message: "Proceed with deployment?" ok: "Yes"
+                dockerDeploy("docker-cloud",$DOCKER_HUB_USER, 'mobile-deposit-api', 8080, 8080, "${DOCKER_TAG}")
             }
         }
     }
