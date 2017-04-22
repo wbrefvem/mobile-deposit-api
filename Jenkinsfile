@@ -22,13 +22,13 @@ pipeline {
                 branch 'maven-build-cache'
             }
             steps {
-                buildMavenCacheImage($DOCKER_HUB_USER, "mobile-depoist-api-mvn-cache", $DOCKER_CREDENTIAL_ID)
+                buildMavenCacheImage("${DOCKER_HUB_USER}", "mobile-depoist-api-mvn-cache", "${DOCKER_CREDENTIAL_ID}")
             }
         }
         stage('Build') {
             agent { 
                 docker { 
-                    image 'beedemo/mobile-depoist-api-mvn-cache' 
+                    image "${DOCKER_HUB_USER}/mobile-depoist-api-mvn-cache"
                     reuseNode true 
                 } 
             }
@@ -46,7 +46,7 @@ pipeline {
         stage('Quality Analysis') {
             agent { 
                 docker { 
-                    image 'beedemo/mobile-depoist-api-mvn-cache' 
+                    image '${DOCKER_HUB_USER}/mobile-depoist-api-mvn-cache' 
                     reuseNode true 
                 } 
             }
@@ -85,7 +85,7 @@ pipeline {
             steps {
                 sh 'docker version'
                 unstash 'jar-dockerfile'
-                dockerBuildPush($DOCKER_HUB_USER, "mobile-deposit-api", "${DOCKER_TAG}", "target", $DOCKER_CREDENTIAL_ID)
+                dockerBuildPush("${DOCKER_HUB_USER}", "mobile-deposit-api", "${DOCKER_TAG}", "target", "${DOCKER_CREDENTIAL_ID}")
             }
         }
         stage('Deploy') {
@@ -98,7 +98,7 @@ pipeline {
             steps {
                 slack(color: "warning", message: "${env.JOB_NAME} awaiting approval at: ${env.BUILD_URL}")
                 input(message: "Proceed with deployment?", ok: "Yes")
-                dockerDeploy("docker-cloud",$DOCKER_HUB_USER, 'mobile-deposit-api', 8080, 8080, "${DOCKER_TAG}")
+                dockerDeploy("docker-cloud","${DOCKER_HUB_USER}", 'mobile-deposit-api', 8080, 8080, "${DOCKER_TAG}")
             }
         }
     }
