@@ -28,7 +28,7 @@ pipeline {
         stage('Build') {
             agent { 
                 docker { 
-                    image "${DOCKER_HUB_USER}/mobile-depoist-api-mvn-cache"
+                    image "beedemo/mobile-depoist-api-mvn-cache"
                     reuseNode true 
                 } 
             }
@@ -46,7 +46,7 @@ pipeline {
         stage('Quality Analysis') {
             agent { 
                 docker { 
-                    image "${DOCKER_HUB_USER}/mobile-depoist-api-mvn-cache"
+                    image "beedemo/mobile-depoist-api-mvn-cache"
                     reuseNode true 
                 } 
             }
@@ -96,7 +96,7 @@ pipeline {
                 branch 'master'
             }
             steps {
-                slack(color: "warning", message: "${env.JOB_NAME} awaiting approval at: ${env.BUILD_URL}")
+                slackSend(color: "warning", message: "${env.JOB_NAME} awaiting approval at: ${env.BUILD_URL}")
                 input(message: "Proceed with deployment?", ok: "Yes")
                 dockerDeploy("docker-cloud","${DOCKER_HUB_USER}", 'mobile-deposit-api', 8080, 8080, "${DOCKER_TAG}")
             }
