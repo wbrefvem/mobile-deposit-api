@@ -22,7 +22,7 @@ pipeline {
                 branch 'maven-build-cache'
             }
             steps {
-                buildMavenCacheImage("${DOCKER_HUB_USER}", "mobile-depoist-api-mvn-cache", "${DOCKER_CREDENTIAL_ID}")
+                buildMavenCacheImage(${DOCKER_HUB_USER}, "mobile-depoist-api-mvn-cache", ${DOCKER_CREDENTIAL_ID})
             }
         }
         stage('Build') {
@@ -46,7 +46,7 @@ pipeline {
         stage('Quality Analysis') {
             agent { 
                 docker { 
-                    image '${DOCKER_HUB_USER}/mobile-depoist-api-mvn-cache' 
+                    image "${DOCKER_HUB_USER}/mobile-depoist-api-mvn-cache"
                     reuseNode true 
                 } 
             }
