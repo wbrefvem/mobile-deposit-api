@@ -96,8 +96,8 @@ pipeline {
                 branch 'master'
             }
             steps {
-                slack color: "warning" message: "${env.JOB_NAME} awaiting approval at: ${env.BUILD_URL}"
-                input message: "Proceed with deployment?" ok: "Yes"
+                slack(color: "warning" message: "${env.JOB_NAME} awaiting approval at: ${env.BUILD_URL}")
+                input(message: "Proceed with deployment?" ok: "Yes")
                 dockerDeploy("docker-cloud",$DOCKER_HUB_USER, 'mobile-deposit-api', 8080, 8080, "${DOCKER_TAG}")
             }
         }
