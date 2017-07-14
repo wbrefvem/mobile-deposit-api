@@ -55,10 +55,7 @@ pipeline {
             }
             when {
                 not {
-                    anyOf {
-                        expression { BRANCH_NAME.startsWith("PR") }
-                        branch "maven-build-cache"
-                    }
+                    branch "maven-build-cache"
                 }
             }
             steps {
@@ -68,11 +65,31 @@ pipeline {
                         
                     },
                     "sonarAnalysis" : {
-                        sh 'mvn -Dmaven.repo.local=/usr/share/maven/ref -Dsonar.scm.disabled=True -Dsonar.login=$SONAR sonar:sonar'
+                        withSonarQubeEnv('beedemo') {
+                            sh 'mvn -Dmaven.repo.local=/usr/share/maven/ref -Dsonar.scm.disabled=True -Dsonar.login=$SONAR sonar:sonar'
+                        }
                     }, failFast: true
                 )
             }
             
+        }
+        stage('Quality Gate') {
+            agent none
+            when {
+                not {
+                    branch "maven-build-cache"
+                }
+            }
+            steps {
+                timeout(time: 4, unit: 'MINUTES') {
+                    script {
+                        def qg = waitForQualityGate()
+                        if (qg.status != 'OK') {
+                            error "Pipeline failure due to quality gate failure: ${qg.status}"
+                        }
+                    }
+                }
+            }
         }
         stage('Build & Push Docker Image') {
             environment {
