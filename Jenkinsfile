@@ -66,7 +66,7 @@ pipeline {
                     },
                     "sonarAnalysis" : {
                         withSonarQubeEnv('beedemo') {
-                            sh 'mvn -Dmaven.repo.local=/usr/share/maven/ref -Dsonar.scm.disabled=True -Dsonar.login=$SONAR sonar:sonar'
+                            sh 'mvn -Dmaven.repo.local=/usr/share/maven/ref -Dsonar.scm.disabled=True -Dsonar.login=$SONAR -Dsonar.branch=$BRANCH_NAME sonar:sonar'
                         }
                     }, failFast: true
                 )
