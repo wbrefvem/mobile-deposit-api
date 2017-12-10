@@ -44,12 +44,6 @@ pipeline {
             }
         }
         stage('Quality Analysis') {
-            agent { 
-                docker { 
-                    image "beedemo/mobile-depoist-api-mvn-cache"
-                    reuseNode true 
-                } 
-            }
             environment {
                 SONAR = credentials('sonar.beedemo')
             }
@@ -58,20 +52,31 @@ pipeline {
                     branch "maven-build-cache"
                 }
             }
-            steps {
-                parallel (
-                    "integrationTests" : {
+            failFast true
+            parallel {
+                stage('Integration Tests') {
+                    agent { 
+                        docker { 
+                            image "beedemo/mobile-depoist-api-mvn-cache"
+                        } 
+                    }
+                    steps {
                         sh 'mvn -Dmaven.repo.local=/usr/share/maven/ref verify'
-                        
-                    },
-                    "sonarAnalysis" : {
+                    }
+                }
+                stage('Sonar Analysis') {
+                    agent { 
+                        docker { 
+                            image "beedemo/mobile-depoist-api-mvn-cache"
+                        } 
+                    }
+                    steps {
                         withSonarQubeEnv('beedemo') {
                             sh 'mvn -Dmaven.repo.local=/usr/share/maven/ref -Dsonar.scm.disabled=True -Dsonar.login=$SONAR -Dsonar.branch=$BRANCH_NAME sonar:sonar'
                         }
-                    }, failFast: true
-                )
+                    }
+                }
             }
-            
         }
         stage('Quality Gate') {
             agent none
@@ -100,7 +105,7 @@ pipeline {
                 branch 'master'
             }
             steps {
-                sh 'docker version'
+                checkpoint 'Before Docker Build and Push'
                 unstash 'jar-dockerfile'
                 dockerBuildPush("${DOCKER_HUB_USER}", "mobile-deposit-api", "${DOCKER_TAG}", "target", "${DOCKER_CREDENTIAL_ID}")
             }
@@ -116,6 +121,7 @@ pipeline {
                 timeout(time: 10, unit: 'MINUTES') {
                     slackSend(color: "warning", message: "${env.JOB_NAME} awaiting approval at: ${env.RUN_DISPLAY_URL}")
                     input(message: "Proceed with deployment?", ok: "Yes")
+                    checkpoint 'Before Deploy'
                     dockerDeploy("docker-cloud","${DOCKER_HUB_USER}", 'mobile-deposit-api', 8080, 8080, "${DOCKER_TAG}")
                 }
             }
