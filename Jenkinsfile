@@ -29,7 +29,6 @@ pipeline {
             agent { 
                 docker { 
                     image "beedemo/mobile-depoist-api-mvn-cache"
-                    reuseNode true 
                 } 
             }
             when {
@@ -44,9 +43,6 @@ pipeline {
             }
         }
         stage('Quality Analysis') {
-            environment {
-                SONAR = credentials('sonar.beedemo')
-            }
             when {
                 not {
                     branch "maven-build-cache"
@@ -69,6 +65,9 @@ pipeline {
                         docker { 
                             image "beedemo/mobile-depoist-api-mvn-cache"
                         } 
+                    }
+                    environment {
+                        SONAR = credentials('sonar.beedemo')
                     }
                     steps {
                         withSonarQubeEnv('beedemo') {
