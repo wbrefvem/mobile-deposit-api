@@ -10,14 +10,22 @@ pipeline {
     }
     stages {
         stage('Checkout') {
-            agent { label 'docker-cloud' }
+            agent { 
+                kubernetes {
+                    label 'jenkins-maven' 
+                }
+            }
             steps {
                 checkout scm
                 gitShortCommit(7)
             }
         }
         stage('Create Build Cache') {
-            agent { label 'docker-cloud' }
+            agent { 
+                kubernetes {
+                    label 'jenkins-maven' 
+                }
+            }
             when {
                 branch 'maven-build-cache'
             }
@@ -27,9 +35,9 @@ pipeline {
         }
         stage('Build') {
             agent { 
-                docker { 
-                    image "beedemo/mobile-depoist-api-mvn-cache"
-                } 
+                kubernetes {
+                    label 'jenkins-maven'
+                }
             }
             when {
                 not {
@@ -52,8 +60,13 @@ pipeline {
             parallel {
                 stage('Integration Tests') {
                     agent { 
-                        docker { 
-                            image "beedemo/mobile-depoist-api-mvn-cache"
+                        kubernetes { 
+                            containerTemplate {
+                                name 'beedemo-maven-cache'
+                                image "beedemo/mobile-depoist-api-mvn-cache"
+                                ttyEnabled true
+                                command 'cat'
+                            }
                         } 
                     }
                     steps {
@@ -62,8 +75,13 @@ pipeline {
                 }
                 stage('Sonar Analysis') {
                     agent { 
-                        docker { 
-                            image "beedemo/mobile-depoist-api-mvn-cache"
+                        kubernetes { 
+                            containerTemplate {
+                                name 'beedemo-maven-cache'
+                                image "beedemo/mobile-depoist-api-mvn-cache"
+                                ttyEnabled true
+                                command 'cat'
+                            }
                         } 
                     }
                     environment {
@@ -99,7 +117,11 @@ pipeline {
             environment {
                 DOCKER_TAG = "${BUILD_NUMBER}-${SHORT_COMMIT}"
             }
-            agent { label 'docker-cloud' }
+            agent { 
+                kubernetes {
+                    label 'jx-base'
+                }
+            }
             when {
                 branch 'master'
             }
